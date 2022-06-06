@@ -1,0 +1,81 @@
+/retrieve 1-byte data word from user to send
+Input
+Store X
+
+/shift the data word 3 bits left 
+Shift, load num_shift
+Subt counter      /computer reamaining number of shift
+Skipcond 800      /if greater than 0, continue to shift 
+Jump Addition
+Load X            /double X is equivalent to shift 1 bit left 
+Add X
+Store X         
+Load counter      /increment loop counter by 1
+Add one
+Store counter
+Jump Shift        /continue looping until X is shifted 3 bits left
+
+/the first remainder is shifted X itself to perform further subtraction
+Load X
+Store remainder
+
+/divide the shifted data word X by agreed-on divisor, 1011
+Division, Load remainder /test if remainder - 1011 >= 0
+Subt divisor             /if true, perform subtration to obtain new remainder
+Skipcond 000             /if result < 0, get out of loop
+Jump Subtraction
+Jump Addition
+
+Subtraction, Store remainder /store remainder - 1011 as new remainder
+Jump Division                /continue to test whether remainder - 1011 >= 0
+
+/add the final remainder to shifted X
+Addition, Load X
+Add remainder
+Store X
+
+/Transmit the data with syndrome bit added
+Load X 
+Output
+
+
+/retrieve the data word that the receiver get 
+Input 
+Store Y
+
+/the first remainder is shifted X itself to perform further subtraction
+Load Y
+Store remainder_2
+
+/check whether the received data work is correct
+Division_2, Load X /test if remainder - 1011 >= 0
+Subt divisor             /if true, perform subtration to obtain new remainder
+Skipcond 400             /if result = 0, received data is correct 
+Jump Continue
+Jump Correct
+
+Continue, Skipcond 800   /if remainder > 0, continue to subtract
+Jump Wrong               /if remainder < 0, received data is wrong
+Store remainder_2        /store remainder - 1011 as new remainder
+Jump Division_2
+       
+       
+Correct, Load one
+Output 
+Halt
+
+Wrong, Load two
+Output
+Halt
+
+
+X, Hex 0             /data to send 
+Y, Hex 0             /data received by receiver
+num_shift, Dec 3     /3 bits to shift left
+counter, Dec 0       /loop counter
+one, Dec 1           /loop counter increase by one each times
+two, Dec 2
+divisor, Dec 11      /agreed-on divisor, 1011(base2) = 11(base10) 
+remainder, Dec 0     /remainder of division
+remainder_2, Dec 0   /remainder of the data word that received
+
