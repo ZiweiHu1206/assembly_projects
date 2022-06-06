@@ -1,0 +1,54 @@
+
+Input 
+Store n /get user input for upper bound n
+Input
+Store m /get user input for lower bound m
+Load n /for skipcond egde case that n is even, m == n will not be skipped
+Add one
+Store n
+
+check_not_greater, Load m /check current m is not greater than n
+Subt n
+Skipcond 000 
+Jump Done /if m is equal to or greater than n+1, output sum
+Load m
+Store temp
+
+Cond, Skipcond 400 /if temp == 0
+Jump Neg
+Jump Even /then m is even
+
+Neg, Skipcond 000 
+Jump Check /continue checking
+Jump Odd /if temp == -1, m is odd
+
+Check, Subt two 
+Store temp /update temp
+Jump Cond /continue checking
+
+Even, Load sum /if current m is even, add m to sum
+Add m
+Store sum
+Load m
+Add one /increase m by 1 and continue checking 
+Store m 
+Jump check_not_greater /check current m is greater than n or not
+
+Odd, Load m /if current m is odd
+Add one /increase m by 1 and continue checking
+Store m
+Jump check_not_greater
+
+Done, Load sum 
+Output /output the sum
+Load sum
+Clear
+Store sum
+Halt
+
+n, Dec 0
+m, Dec 0
+sum, Dec 0
+one, Dec 1
+two, Dec 2
+temp, Dec 0
