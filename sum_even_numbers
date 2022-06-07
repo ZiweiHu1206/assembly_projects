@@ -13,18 +13,35 @@ Skipcond 000
 Jump Done /if m is equal to or greater than n+1, output sum
 Load m
 Store temp
-
-Cond, Skipcond 400 /if temp == 0
+Skipcond 000 /if temp is negative, go to neg block, otherwise go to pos block
+Jump Pos
 Jump Neg
-Jump Even /then m is even
 
-Neg, Skipcond 000 
-Jump Check /continue checking
-Jump Odd /if temp == -1, m is odd
+/check positive m is even or odd
+Pos, Skipcond 400  /if temp == 0
+Jump Pos_continue
+Jump Even 
 
-Check, Subt two 
-Store temp /update temp
-Jump Cond /continue checking
+Pos_continue, Skipcond 000 
+Jump Pos_subt
+Jump Odd  /if temp == -1, m is odd and positive
+
+Pos_subt, Subt two 
+Store temp
+Jump Pos
+
+/check negative m is even or odd
+Neg, Skipcond 400
+Jump Neg_continue
+Jump Even 
+
+Neg_continue, Skipcond 800
+Jump Neg_add
+Jump Odd /if temp == 1, m is odd and negative
+
+Neg_add, Add two
+Store temp
+Jump Neg
 
 Even, Load sum /if current m is even, add m to sum
 Add m
