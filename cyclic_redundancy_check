@@ -1,81 +1,410 @@
+/request the sender to enter 1-byte data
+/change output mode to UNICODE
+Load Zero
+Store String_Index
+Print_1, Load String_Address_1 /print string through indirect address
+Add String_Index
+Store Current_Address
+LoadI Current_Address
+Skipcond 800                   /if encounter end of string, go to next step
+Jump Input_1
+Output
+Load String_Index              /increment index by 1
+Add One
+Store String_Index
+Jump Print_1
+
+
 /retrieve 1-byte data word from user to send
-Input
-Store X
+Input_1, Input
+Store Dividend 
+
 
 /shift the data word 3 bits left 
-Shift, load num_shift
-Subt counter      /computer reamaining number of shift
-Skipcond 800      /if greater than 0, continue to shift 
-Jump Addition
-Load X            /double X is equivalent to shift 1 bit left 
-Add X
-Store X         
-Load counter      /increment loop counter by 1
-Add one
-Store counter
-Jump Shift        /continue looping until X is shifted 3 bits left
+Shift_Bit, Load Num_Shift
+Subt Counter        /compute remaining number of shift
+Skipcond 800        /if greater than 0, continue to shift 
+Jump Start_Division 
+Load Dividend       /double X is equivalent to shift 1 bit left 
+Add Dividend
+Store Dividend        
+Load Counter        /increment loop counter by 1
+Add One
+Store Counter
+Jump Shift_Bit      /continue looping until X is shifted 3 bits left
 
-/the first remainder is shifted X itself to perform further subtraction
-Load X
-Store remainder
 
-/divide the shifted data word X by agreed-on divisor, 1011
-Division, Load remainder /test if remainder - 1011 >= 0
-Subt divisor             /if true, perform subtration to obtain new remainder
-Skipcond 000             /if result < 0, get out of loop
-Jump Subtraction
-Jump Addition
+/copy dividend to Original_Dividend 
+Start_Division, Load Dividend
+Store Original_Dividend
+Load HA_Address     /restore array addresses and index number
+Store HA_Position
+Load DA_Address
+Store DA_Position
+Load Zero
+Store Index
 
-Subtraction, Store remainder /store remainder - 1011 as new remainder
-Jump Division                /continue to test whether remainder - 1011 >= 0
 
-/add the final remainder to shifted X
-Addition, Load X
-Add remainder
+/extract every single bit from 11-bit dividend into an array of 1 bit
+Extract_Digit, Load Size
+Subt Index
+Skipcond 800       /if index is greater than size then we're done
+Jump Restore
+Load Dividend      /subtract current dividend by specific value in Hex Array
+AddI HA_Position   /to determine whether current digit is 0 or 1
+Skipcond 000       /if >= 0, then current bit is 1, and vice versa
+Jump Positive_Update
+Jump Negative_Update
+
+
+/update 1 to current digit in the Digit Array
+Positive_Update, Load Dividend /subtract dividend by specific value in Hex Array
+AddI HA_Position  
+Store Dividend
+Load HA_Position   /increment Hex Array position by one
+Add One
+Store HA_Position
+Load One           /store the digit in Digit Array as 1
+StoreI DA_Position
+Load DA_Position   /increment Digit Array position by one
+Add One
+Store DA_Position
+Load Index         /increment the Index by one
+Add One
+Store Index
+Jump Extract_Digit /continue to extract next bit
+
+
+/update 0 to current digit in Digit Array 
+Negative_Update, Load HA_Position /increment Hex Array position by one
+Add One
+Store HA_Position
+Load Zero          /store the digit in Digit Array as 0
+StoreI DA_Position
+Load DA_Position   /increment Digit Array position by one
+Add One
+Store DA_Position
+Load Index         /increment the index by one
+Add One
+Store Index
+Jump Extract_Digit /continue to extract next bit
+
+
+/restore array index and pointer
+Restore, Load Zero /reset the array index to 0
+Store Index
+Load DA_Address    /reset the pointer to index 0 of Digit Array
+Store DA_Position
+
+
+/perform modulo 2 division 
+Division, Load Size  
+Subt Index
+Skipcond 800       
+Jump Finish        /if index is greater than size then we're done
+Load Temp_1        
+Skipcond 800       
+Jump Shift         /if first bit is 0, shift left by 1 bit
+Load Temp_1        /if the first bit of 4 bit is 1 then perform mod 2 subt
 Store X
-
-/Transmit the data with syndrome bit added
-Load X 
-Output
-
-
-/retrieve the data word that the receiver get 
-Input 
+Load Divisor_1
 Store Y
+JnS XOR
+Load W             /update output to 1st bit
+Store Temp_1       
+Load Temp_2        /perform XOR operation with 2nd bit
+Store X
+Load Divisor_2
+Store Y
+JnS XOR
+Load W             /update output to 2nd bit
+Store Temp_2
+Load Temp_3        /perform XOR operation with 3rd bit 
+Store X
+Load Divisor_3
+Store Y
+JnS XOR
+Load W             /update output to 3rd bit
+Store Temp_3      
+Load Temp_4        /perform XOR operation with 4th bit
+Store X
+Load Divisor_4
+Store Y
+JnS XOR
+Load W             /update output to 4th bit
+Store Temp_4
+Jump Division
 
-/the first remainder is shifted X itself to perform further subtraction
-Load Y
-Store remainder_2
 
-/check whether the received data work is correct
-Division_2, Load X /test if remainder - 1011 >= 0
-Subt divisor             /if true, perform subtration to obtain new remainder
-Skipcond 400             /if result = 0, received data is correct 
-Jump Continue
-Jump Correct
+/shift left by 1 bit and the 4th bit becomes the digit of current DA_Position
+Shift, Load Temp_2
+Store Temp_1
+Load Temp_3
+Store Temp_2
+Load Temp_4
+Store Temp_3
+LoadI DA_Position    /Update the 4th bit 
+Store Temp_4
+Load DA_Position     /increment DA_Position pointer by 1
+Add One
+Store DA_Position
+Load Index           /increment index of array by 1
+Add One
+Store Index
+Jump Division
 
-Continue, Skipcond 800   /if remainder > 0, continue to subtract
-Jump Wrong               /if remainder < 0, received data is wrong
-Store remainder_2        /store remainder - 1011 as new remainder
-Jump Division_2
-       
-       
-Correct, Load one
-Output 
-Halt
 
-Wrong, Load two
+/perform X XOR Y operation
+XOR, Hex 000         /store address to use when returning from XOR
+Load X
+Skipcond 800
+Jump X=0
+Jump X=1
+X=0, Load Y          
+Skipcond 800
+Jump Zero_Zero       /if X = 0, Y = 0
+Jump Zero_One        /if X = 0, Y = 1
+X=1, Load Y
+Skipcond 800         
+Jump One_Zero        /if X = 1, Y = 0
+Jump One_One         /if X = 1, Y = 1
+
+/store different output of XOR operation
+Zero_Zero, Load Zero
+Store W
+JumpI XOR            /return from XOR to the address we stored when XOR was called
+Zero_One, Load One
+Store W
+JumpI XOR
+One_Zero, Load One
+Store W
+JumpI XOR
+One_One, Load Zero
+Store W
+JumpI XOR
+
+
+/add remainder to the information string 
+Add_Remainder_1, Load Temp_2
+Skipcond 400        /if 2nd bit of remainder is 1, add to original shifted data
+Jump Temp_2_is_1
+Jump Add_Remainder_2
+Temp_2_is_1, Load Original_Dividend
+Add Hex_Four        /add 100 in binary 
+Store Original_Dividend 
+
+Add_Remainder_2, Load Temp_3
+Skipcond 400        /if 3rd bit of remainder is 1, add to original shifted data
+Jump Temp_3_is_1
+Jump Add_Remainder_3
+Temp_3_is_1, Load Original_Dividend
+Add Hex_Two         /add 10 in binary
+Store Original_Dividend
+
+Add_Remainder_3, Load Temp_4
+Skipcond 400        /if 4th bit of remainder is 1, add to original shifted data
+Jump Temp_4_is_1
+Jump Transmit
+Temp_4_is_1, Load Original_Dividend 
+Add One             /add 1 in binary
+Store Original_Dividend
+
+
+/simulate data transmission by output data word with syndrome bits 
+/change output mode to BIN
+Transmit, Load Original_Dividend
+Output
+
+/simulate receiving data by input the received data by receiver
+Input 
+Store Dividend     /store received data as new dividend
+Load One
+Store Phase        /store phase as 1 indicating we are doing 2nd round division
+Load Zero          /restore remainder to 0
+Store Temp_1
+Store Temp_2
+Store Temp_3
+Store Temp_4
+Jump Start_Division
+
+
+
+/when finish division, check whether in 1st or 2nd round division
+Finish, Load Phase
+Skipcond 800    
+Jump Add_Remainder_1
+
+Remainder_1, Load Temp_2
+Skipcond 400        /if 2nd bit of remainder is 1
+Jump Temp_2_Add
+Jump Remainder_2
+Temp_2_Add, Load Remainder
+Add Hex_Four        /add 100 in binary 
+Store Remainder
+
+Remainder_2, Load Temp_3
+Skipcond 400        /if 3rd bit of remainder is 1
+Jump Temp_3_Add
+Jump Remainder_3
+Temp_3_Add, Load Remainder
+Add Hex_Two         /add 10 in binary
+Store Remainder
+
+Remainder_3, Load Temp_4
+Skipcond 400        /if 4th bit of remainder is 1
+Jump Temp_4_Add
+Jump Output
+Temp_4_Add, Load Remainder 
+Add One             /add 1 in binary
+Store Remainder
+
+
+/output remainder of received data and correctness
+Output, Load Remainder
+Skipcond 400
+Jump False
+Jump Print_Correctness
+False, Load One
+Store Correctness
+Jump Print_Correctness
+
+/print correctness (True/False) to screen, change to UNICODE output mode
+Print_Correctness, Load Zero
+Store String_Index
+Load Correctness
+Skipcond 400                    /if 1, then error has been detected
+Jump Print_False
+Jump Print_True
+
+Print_True, Load String_Address_2 /print string through indirect address
+Add String_Index
+Store Current_Address
+LoadI Current_Address
+Skipcond 800                   /if encounter end of string, go to next step
+Jump Done
+Output
+Load String_Index              /increment index by 1
+Add One
+Store String_Index
+Jump Print_True
+
+Print_False, Load String_Address_3 /print string through indirect address
+Add String_Index
+Store Current_Address
+LoadI Current_Address
+Skipcond 800                   /if encounter end of string, go to next step
+Jump Done
+Output
+Load String_Index              /increment index by 1
+Add One
+Store String_Index
+Jump Print_False
+
+
+/print the remainder of received data to screen, terminate the program
+Done, Load Remainder
 Output
 Halt
 
 
-X, Hex 0             /data to send 
-Y, Hex 0             /data received by receiver
-num_shift, Dec 3     /3 bits to shift left
-counter, Dec 0       /loop counter
-one, Dec 1           /loop counter increase by one each times
-two, Dec 2
-divisor, Dec 11      /agreed-on divisor, 1011(base2) = 11(base10) 
-remainder, Dec 0     /remainder of division
-remainder_2, Dec 0   /remainder of the data word that received
 
+Dividend, Hex 0 
+Original_Dividend, Hex 0
+One, Hex 1
+Zero, Hex 0
+Hex_Two, Hex 2
+Hex_Four, Hex 4
+Size, Hex B          /size of the array, 11 in decimal
+Index, Hex 0         /current array index
+Num_Shift, Dec 3     /3 bits to shift left
+Counter, Dec 0       /loop counter for shifting
+Phase, Hex 0         /0 if first round, 1 if second round when doing division
+Remainder, Hex 0     /remainder of received data word
+Correctness, Hex 0   /0 indicating received data is correct, 1 indicating error
+
+/Hexadecimal Array 
+HA_Position, Hex 0   /address of current Hex Array index 
+HA_Address, Hex 104   /address of index 0 of Hex Array 
+HA_Array, Hex -400   /index 0 of Hex Array, 1024 in decimal
+Hex -200             /512 in decimal
+Hex -100
+Hex -80
+Hex -40
+Hex -20
+Hex -10
+Hex -8
+Hex -4
+Hex -2
+Hex -1
+
+
+/Digit Array to represent dividend in bit form 
+DA_Position, Hex 0 /address of current Digit Array index
+DA_Address, Hex 111 /address of index 0 of Hex Array
+DA_Array, Hex 0    /index 0 of Digit Array 
+Hex 0
+Hex 0
+Hex 0
+Hex 0
+Hex 0
+Hex 0
+Hex 0
+Hex 0
+Hex 0
+Hex 0
+
+
+/agreed-on divisor in bit form
+Divisor_1, Hex 1
+Divisor_2, Hex 0
+Divisor_3, Hex 1
+Divisor_4, Hex 1
+
+
+/storing 4 bit to perform modulo 2 subtraction by 1011
+Temp_1, Hex 0
+Temp_2, Hex 0
+Temp_3, Hex 0
+Temp_4, Hex 0
+
+
+/two bits to perform XOR operation
+X, Hex 0
+Y, Hex 0
+W, Hex 0           /W = X XOR Y, return W
+
+
+/pointer to print string
+String_Index, Hex 0
+Current_Address, Hex 0
+
+/string "Input data:"
+String_Address_1, Hex 12A
+String_1, Dec 73
+Dec 110
+Dec 112
+Dec 117
+Dec 116
+Dec 32
+Dec 100
+Dec 97
+Dec 116
+Dec 97
+Dec 58
+Dec 0          /represent end of string "\0"
+
+/string "True"
+String_Address_2, Hex 137
+String_2, Dec 84
+Dec 114
+Dec 117
+Dec 101
+Dec 0
+
+/string "False"
+String_Address_3, Hex 13D
+String_3, Dec 70
+Dec 97
+Dec 108
+Dec 115
+Dec 101
